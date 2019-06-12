@@ -21,23 +21,28 @@ OPS = {
 }
 
 
-class Pooling2D(object):
+class Pooling2D(chainer.Chain):
 
-    def __init__(self, op, ksize, stride, pad):
+    def __init__(self, op, ksize, stride, pad, cover_all=False):
+        super(Pooling2D, self).__init__()
+        with self.init_scope():
+            pass
         assert op in ['average', 'max']
         self.op = op
         self.ksize = ksize
         self.stride = stride
         self.pad = pad
+        self.cover_all = cover_all
 
     def __call__(self, x):
         if self.op == 'average':
             # count_include_pad = False
-            return F.average_pooling_2d(
-                    x, self.ksize, self.stride, self.pad)
+            return F.average_pooling_nd(
+                    x, self.ksize, self.stride, self.pad, None)
         elif self.op == 'max':
             return F.max_pooling_2d(
-                    x, self.ksize, self.stride, self.pad)
+                    x, self.ksize, self.stride, self.pad,
+                    cover_all=self.cover_all)
 
 
 class ConvKx1And1xK(chainer.Sequential):

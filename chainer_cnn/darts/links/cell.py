@@ -28,6 +28,7 @@ class Cell(chainer.Chain):
             concat_indices = genotype.normal_concat
 
         self._compile(C, op_names, src_indices, concat_indices, is_reduction)
+        self._is_reduction = is_reduction
 
     def _compile(
             self, C, op_names, src_indices, concat_indices, is_reduction):

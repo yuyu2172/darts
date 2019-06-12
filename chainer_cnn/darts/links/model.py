@@ -1,8 +1,7 @@
 import chainer.links as L
 import chainer.functions as F
 import chainer
-from chainercv.links import Conv2DBActiv
-from chainercv.links import PickableSequentialChain
+from chainercv.links import Conv2DBNActiv
 
 from .cell import Cell
 from .auxiliary_head import AuxiliaryHeadCIFAR
@@ -11,18 +10,21 @@ from .auxiliary_head import AuxiliaryHeadCIFAR
 class NetworkCIFAR(chainer.Chain):
 
     def __init__(
-            self, init_C, n_class, n_layer, use_auxiliary,
-            drop_path_prob, genotype):
+            self, genotype, init_C=36,
+            n_class=10, n_layer=20, use_auxiliary=True,
+            drop_path_prob=0.2):
         super(NetworkCIFAR, self).__init__()
 
         self._n_layer = n_layer
         self._use_auxiliary = use_auxiliary
         self.drop_path_prob = drop_path_prob
+        bn_kwargs = {'eps': 1e-05}
 
         stem_multiplier = 3
         curr_C = stem_multiplier * init_C
         with self.init_scope():
-            self.stem = Conv2DBActiv(3, curr_C, pad=1, activ=None)
+            self.stem = Conv2DBNActiv(
+                3, curr_C, 3, pad=1, activ=None, bn_kwargs=bn_kwargs)
 
             prev_prev_C, prev_C, curr_C = curr_C, curr_C, init_C
 
@@ -54,13 +56,18 @@ class NetworkCIFAR(chainer.Chain):
 
     def forward(self, x):
         aux_logits = None
-        s0 = self.stem(x)
-        s1 = s0
+        prev_s = self.stem(x)
+        prev_prev_s = prev_s
 
         for i, cell in enumerate(self.cells):
-            s0, s1 = s1, cell(s0, s1, self.drop_path_prob)
+            prev_prev_s, prev_s = prev_s, cell(
+                prev_prev_s, prev_s, self.drop_path_prob)
             if i == 2 * self._n_layer // 3:
                 # TODO: train
-            out = F.average_pooling_2d(s1, ksize=s1.shape[2:], pad=0)
-            logits = self.classifier(out.reshape((out.shape[0], -1)))
-        return logits, aux_logits
+                pass
+        out = F.average_pooling_2d(prev_s, ksize=prev_s.shape[2:], pad=0)
+        logits = self.classifier(out.reshape((out.shape[0], -1)))
+        if chainer.global_config.train:
+            return logits, aux_logits
+        else:
+            return logits
