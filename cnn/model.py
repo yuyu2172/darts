@@ -110,6 +110,10 @@ class AuxiliaryHeadImageNet(nn.Module):
 
 class NetworkCIFAR(nn.Module):
 
+  # layers: number of total layers
+  # auxiliary: use auxiliary tower
+  # genotype: DARTS
+  # C: init channels  36
   def __init__(self, C, num_classes, layers, auxiliary, genotype):
     super(NetworkCIFAR, self).__init__()
     self._layers = layers

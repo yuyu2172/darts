@@ -1,4 +1,9 @@
 # Differentiable Architecture Search
+
+```
+conda install pytorch=0.3.1 torchvision -c pytorch
+```
+
 Code accompanying the paper
 > [DARTS: Differentiable Architecture Search](https://arxiv.org/abs/1806.09055)\
 > Hanxiao Liu, Karen Simonyan, Yiming Yang.\
