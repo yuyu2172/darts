@@ -51,9 +51,10 @@ if __name__ == '__main__':
     val_data = TransformDataset(
         val_data, ('img', 'label'), cifar10_val_transform)
 
-    train_iter = chainer.iterators.SerialIterator(train_data, args.batchsize)
-    val_iter = chainer.iterators.SerialIterator(val_data, args.batchsize,
-                                                repeat=False, shuffle=False)
+    train_iter = chainer.iterators.MultiprocessIterator(
+        train_data, args.batchsize, n_prefetch=1)
+    val_iter = chainer.iterators.MultiprocessIterator(val_data, args.batchsize,
+                                                      repeat=False, shuffle=False)
     evaluator = extensions.Evaluator(val_iter, classifier, device=args.gpu)
 
     updater = chainer.training.updaters.StandardUpdater(
@@ -73,13 +74,14 @@ if __name__ == '__main__':
         return min_lr + max_lr * rate
 
     trainer.extend(lr_schedule)
-    trainer.extend(extensions.LogReport(), trigger=(50, 'iteration'))
+    trainer.extend(extensions.LogReport(), trigger=(1, 'epoch'))
 
+    trainer.extend(extensions.observe_lr(), trigger=(1, 'epoch'))
     trainer.extend(extensions.PrintReport(
         ['epoch', 'lr', 'main/loss', 'validation/main/loss',
          'main/accuracy', 'validation/main/accuracy', 'elapsed_time']),
-        trigger=(50, 'iteration'))
-    trainer.extend(extensions.ProgressBar())
+        trigger=(1, 'epoch'))
+    trainer.extend(extensions.ProgressBar(update_interval=50))
     trainer.extend(
         extensions.snapshot_object(
             model, 'model_iter_{.updater.epoch_detail}'),
