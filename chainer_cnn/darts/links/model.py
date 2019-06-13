@@ -50,7 +50,8 @@ class NetworkCIFAR(chainer.Chain):
                         auxiliary_in_C = prev_C
 
             if use_auxiliary:
-                self.auxiliary_head = AuxiliaryHeadCIFAR(auxiliary_in_C, n_class)
+                self.auxiliary_head = AuxiliaryHeadCIFAR(
+                    auxiliary_in_C, n_class)
 
             self.classifier = L.Linear(prev_C, n_class)
 
@@ -63,11 +64,37 @@ class NetworkCIFAR(chainer.Chain):
             prev_prev_s, prev_s = prev_s, cell(
                 prev_prev_s, prev_s, self.drop_path_prob)
             if i == 2 * self._n_layer // 3:
-                # TODO: train
-                pass
+                if self._use_auxiliary and chainer.global_config.train:
+                    aux_logits = self.auxiliary_head(prev_s)
         out = F.average_pooling_2d(prev_s, ksize=prev_s.shape[2:], pad=0)
         logits = self.classifier(out.reshape((out.shape[0], -1)))
-        if chainer.global_config.train:
-            return logits, aux_logits
+        return logits, aux_logits
+
+
+class TrainChain(chainer.Chain):
+
+    def __init__(self, model, use_auxiliary=False):
+        super(TrainChain, self).__init__()
+
+        with self.init_scope():
+            self.model = model
+
+        self.use_auxiliary = use_auxiliary
+
+    def forward(self, x, t):
+        logits, aux_logits = self.model(x)
+        base_loss = F.softmax_cross_entropy(logits, t)
+        if chainer.global_config.train and self.use_auxiliary:
+            aux_loss = F.softmax_cross_entropy(aux_logits, t)
         else:
-            return logits
+            aux_loss = 0
+
+        loss = base_loss + aux_loss
+
+        chainer.reporter.report({
+            'loss': loss,
+            'aux_loss': aux_loss,
+            'base_loss': base_loss,
+            'accuracy': F.accuracy(logits, t)},
+            self)
+        return loss

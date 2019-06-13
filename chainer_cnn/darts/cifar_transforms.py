@@ -32,18 +32,19 @@ class Cutout(object):
 
 class CIFAR10TrainTransform(object):
 
-    def __init__(self, do_cutout, cutout_length):
-        self.do_cutout = do_cutout
+    def __init__(self, use_cutout, cutout_length):
+        self.use_cutout = use_cutout
         self.cutout_length = cutout_length
 
     def __call__(self, in_data):
         img, label = in_data
 
         img = np.pad(img, ((0, 0), (4, 4), (4, 4)), 'constant')
-        img = random_crop(img, (32, 32), x_random=True)
+        img = random_crop(img, (32, 32))
+        img = random_flip(img, x_random=True)
         img = (img - CIFAR_MEAN[:, None, None]) / CIFAR_STD[:, None, None]
 
-        if self.do_cutout:
+        if self.use_cutout:
             img = Cutout(self.cutout_length)(img)
         return img, label
 

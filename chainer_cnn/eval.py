@@ -9,7 +9,7 @@ from darts.operations import *
 
 from darts.cifar_transforms import cifar10_val_transform
 from chainercv.chainer_experimental.datasets.sliceable import TransformDataset
-from chainer.links import Classifier
+from darts.links.model import TrainChain
 
 
 if __name__ == '__main__':
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     model = NetworkCIFAR(DARTS)
     chainer.serializers.load_npz(args.pretrained_model, model)
     chainer.global_config.train = False
-    classifier = Classifier(model)
+    classifier = TrainChain(model)
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
         classifier.to_gpu()
@@ -35,4 +35,3 @@ if __name__ == '__main__':
         it, classifier, device=args.gpu)
     result = evaluator()
     print('Top 1 error {}%'.format(100 * float(1 - result['main/accuracy'])))
-
